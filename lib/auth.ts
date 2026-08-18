@@ -20,6 +20,11 @@ export const auth = betterAuth({
       ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
       : []),
   ],
+  advanced: {
+    crossSubdomainCookies: {
+      enabled: true,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     async sendResetPassword({ user, url, token }) {
