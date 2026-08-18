@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Barbershop {
+  id          String              @id @default(uuid())
+  name        String
+  address     String
+  description String
+  imageUrl    String
+  phones      String[]
+  email       String?
+  services    BarbershopService[]
+  bookings    Booking[]
+  schedules   BarbershopSchedule[]
+  closedDates String[]            @default([])
+}
+
+model BarbershopSchedule {
+  id                    String     @id @default(uuid())
+  barbershopId          String
+  barbershop            Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  dayOfWeek             Int        // 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado
+  isOpen                Boolean    @default(true)
+  startTime             String     @default("08:00")
+  endTime               String     @default("18:00")
+  slotIntervalInMinutes Int        @default(30)
+  breakStartTime        String?    @default("12:00")
+  breakEndTime          String?    @default("13:00")
+
+  @@unique([barbershopId, dayOfWeek])
+}
+
+model BarbershopService {
+  id                String     @id @default(uuid())
+  name              String
+  description       String
+  imageUrl          String
+  barbershopId      String
+  barbershop        Barbershop @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  priceInCents      Int
+  durationInMinutes Int        @default(30)
+  bookings          Booking[]
+}
+
+model Booking {
+  id           String            @id @default(uuid())
+  serviceId    String
+  barbershopId String
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  date         DateTime          @db.Timestamptz
+  cancelled    Boolean?          @default(false)
+  cancelledAt  DateTime?         @db.Timestamptz
+  barbershop   Barbershop        @relation(fields: [barbershopId], references: [id], onDelete: Cascade)
+  service      BarbershopService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  bookings      Booking[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model MasterAdmin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("master_admin")
+}
+
